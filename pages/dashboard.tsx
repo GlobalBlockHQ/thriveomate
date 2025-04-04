@@ -1,32 +1,47 @@
 // /pages/dashboard.tsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function Dashboard() {
-  const [plan, setPlan] = useState('Starter'); // Placeholder for real plan detection
-  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState('Loading...');
+
+  useEffect(() => {
+    // Temporary: Simulate fetching user plan from backend
+    // Replace with real fetch later (from DB or session)
+    const email = 'user@example.com'; // Replace with real logged-in email when auth is connected
+
+    fetch(`/api/user-plan?email=${encodeURIComponent(email)}`)
+      .then(res => res.json())
+      .then(data => setPlan(data.plan || 'Starter'))
+      .catch(() => setPlan('Starter'));
+  }, []);
+
+  const upgradeButtons = (
+    <>
+      <h2>Upgrade Your Plan</h2>
+      <button style={{ marginRight: '1rem', padding: '10px 20px' }} onClick={() => handleUpgrade('pro')}>
+        Upgrade to Pro – $19/mo
+      </button>
+      <button style={{ padding: '10px 20px' }} onClick={() => handleUpgrade('elite')}>
+        Upgrade to Elite – $49/mo
+      </button>
+    </>
+  );
 
   const handleUpgrade = async (selectedPlan: string) => {
-    setLoading(true);
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: selectedPlan }),
       });
-
       const data = await res.json();
       if (data.sessionId) {
         window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
-      } else {
-        alert('Checkout session failed.');
       }
     } catch (err) {
       console.error(err);
-      alert('An error occurred during checkout.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -42,23 +57,28 @@ export default function Dashboard() {
 
         <section style={{ marginTop: '2rem' }}>
           <h2>ThriveAI Tools</h2>
-          <ul>
-            <li>Business Name + Brand Generator (coming soon)</li>
-            <li>Website Builder (coming soon)</li>
-            <li>Marketing Bot – auto-publishes content</li>
-            <li>Security Bot – monitors threats and abuse</li>
-            <li>ThriveAI Mentor – personalized business advisor</li>
-          </ul>
-        </section>
+          {plan === 'Starter' && (
+            <>
+              <p>You’re on the free plan. Upgrade to unlock all AI tools.</p>
+              {upgradeButtons}
+            </>
+          )}
 
-        <section style={{ marginTop: '2rem' }}>
-          <h2>Upgrade Your Plan</h2>
-          <button onClick={() => handleUpgrade('pro')} disabled={loading} style={{ marginRight: '1rem', padding: '10px 20px' }}>
-            Upgrade to Pro – $19/mo
-          </button>
-          <button onClick={() => handleUpgrade('elite')} disabled={loading} style={{ padding: '10px 20px' }}>
-            Upgrade to Elite – $49/mo
-          </button>
+          {plan === 'Pro' && (
+            <ul>
+              <li>Unlimited AI tools</li>
+              <li>Marketing bot access</li>
+              <li>Security monitoring</li>
+            </ul>
+          )}
+
+          {plan === 'Elite' && (
+            <ul>
+              <li>All Pro features</li>
+              <li>ThriveAI Mentor (strategy + growth AI)</li>
+              <li>Priority access to all new tools</li>
+            </ul>
+          )}
         </section>
       </main>
     </>
