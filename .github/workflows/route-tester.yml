@@ -1,0 +1,37 @@
+name: Route Test Bot
+
+on:
+  workflow_run:
+    workflows: ["Auto Repair + Deploy"]
+    types:
+      - completed
+
+jobs:
+  test-routes:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧪 Test Live Site Routes
+        run: |
+          base_url="https://thriveomate.onrender.com"
+          echo "Testing $base_url..."
+
+          for route in "/" "/admin" "/dashboard" "/tools/brand-generator" "/api/user-plan?email=test@user.com"; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "$base_url$route")
+            echo "Route: $route → Status: $status"
+            if [ "$status" -ne 200 ] && [ "$status" -ne 302 ]; then
+              echo "❌ Route $route failed with status $status"
+              exit 1
+            fi
+          done
+
+          echo "✅ All routes responded successfully."
+
+      - name: ✅ Notify Success
+        if: success()
+        run: echo "✅ Route testing passed."
+
+      - name: ❌ Notify Failure
+        if: failure()
+        run: echo "❌ Route testing failed. Check logs above."
