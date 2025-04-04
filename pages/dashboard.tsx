@@ -9,7 +9,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Temporary: Simulate fetching user plan from backend
     // Replace with real fetch later (from DB or session)
-    const email = 'user@example.com'; // Replace with real logged-in email when auth is connected
+    const email = 'hyside76@gmail.com'; // Replace with real logged-in email when auth is connected
 
     fetch(`/api/user-plan?email=${encodeURIComponent(email)}`)
       .then(res => res.json())
