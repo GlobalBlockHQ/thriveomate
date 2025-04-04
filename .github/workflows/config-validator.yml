@@ -1,0 +1,53 @@
+name: Config Validator Bot
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  validate-config:
+    name: Validate Project Configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🧠 Validate package.json
+        run: |
+          if ! grep -q '"start":\s*"next start"' package.json; then
+            echo "❌ Missing or invalid 'start' script in package.json"
+            exit 1
+          fi
+
+          if ! grep -q '"build":\s*"next build"' package.json; then
+            echo "❌ Missing or invalid 'build' script in package.json"
+            exit 1
+          fi
+
+          echo "✅ package.json scripts look valid."
+
+      - name: 🔎 Check tsconfig.json
+        run: |
+          if [ ! -f tsconfig.json ]; then
+            echo "❌ Missing tsconfig.json file"
+            exit 1
+          fi
+
+          if ! grep -q '"compilerOptions"' tsconfig.json; then
+            echo "❌ Invalid tsconfig.json structure"
+            exit 1
+          fi
+
+          echo "✅ tsconfig.json is present and valid."
+
+      - name: 🔐 Validate .env placeholder
+        run: |
+          if ! grep -q 'OPENAI_API_KEY=' .env.local 2>/dev/null; then
+            echo "⚠️ .env.local is missing or doesn't include OPENAI_API_KEY"
+          else
+            echo "✅ .env.local contains OPENAI_API_KEY"
+          fi
+
+      - name: ✅ Config validation completed
+        run: echo "✅ All critical config files passed validation checks."
