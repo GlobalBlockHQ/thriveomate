@@ -1,0 +1,56 @@
+name: Auto Repair + Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  auto-repair:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: 📦 Install dependencies
+        run: npm install || true
+
+      - name: 🔍 Detect missing packages
+        id: check
+        run: |
+          MISSING=""
+          for FILE in $(find pages/ -name "*.ts" -or -name "*.tsx"); do
+            MODULES=$(grep -oP "from ['\"]\K[^'\"]+" "$FILE" | grep -vE "^\.|next|react|@|/" || true)
+            for MODULE in $MODULES; do
+              if ! npm list "$MODULE" >/dev/null 2>&1; then
+                MISSING="$MISSING $MODULE"
+              fi
+            done
+          done
+          echo "Missing packages:$MISSING"
+          echo "missing=$MISSING" >> $GITHUB_OUTPUT
+
+      - name: 🛠️ Auto-install missing packages
+        if: steps.check.outputs.missing != ''
+        run: |
+          npm install ${{ steps.check.outputs.missing }}
+          git config user.name "AI Repair Bot"
+          git config user.email "ai-bot@thriveomate.com"
+          git add package.json package-lock.json
+          git commit -m "fix: auto-install missing modules"
+          git push
+
+      - name: 🧪 Build check
+        run: npm run build
+
+      - name: 🚀 Deploy to Render
+        if: success()
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
