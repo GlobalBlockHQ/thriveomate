@@ -1,73 +1,47 @@
-// /pages/admin.tsx
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Sparkles, Lightbulb } from 'lucide-react';
 
-import { useState } from 'react';
-import Head from 'next/head';
+export default function AdminInsightsPage() {
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function AdminPanel() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [input, setInput] = useState('');
-  const [log, setLog] = useState<string[]>([
-    '[ManagerBot] System online.',
-    '[DeployBot] Last commit deployed successfully.',
-    '[MarketingBot] 1 new blog post scheduled for tomorrow.',
-  ]);
-
-  const handleLogin = () => {
-    if (input === 'founder-access') {
-      setAuthenticated(true);
-    } else {
-      alert('Incorrect passphrase.');
-    }
-  };
+  useEffect(() => {
+    fetch('/data/insights.json')
+      .then((res) => res.text())
+      .then((text) => {
+        const items = text
+          .replace(/^"|"$/g, '') // remove outer quotes
+          .split('\\n') // split into lines
+          .filter(Boolean); // clean up
+        setIdeas(items);
+        setLoading(false);
+      });
+  }, []);
 
   return (
-    <>
-      <Head>
-        <title>Admin Panel | Thriveomate</title>
-      </Head>
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold flex items-center gap-2">
+        <Sparkles className="text-yellow-400" /> AI Growth Insights
+      </h1>
 
-      <main style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
-        {!authenticated ? (
-          <>
-            <h1>Admin Login</h1>
-            <p>Enter your passphrase to access the system:</p>
-            <input
-              type="password"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Passphrase"
-              style={{ padding: '8px', fontSize: '1rem' }}
-            />
-            <button onClick={handleLogin} style={{ marginLeft: '1rem', padding: '8px 16px' }}>
-              Enter
-            </button>
-          </>
-        ) : (
-          <>
-            <h1>Thriveomate AI Admin Panel</h1>
-            <p>Welcome, Founder. Here’s what your bots have been up to:</p>
-
-            <ul style={{ marginTop: '1rem' }}>
-              {log.map((entry, idx) => (
-                <li key={idx}>{entry}</li>
-              ))}
-            </ul>
-
-            <div style={{ marginTop: '2rem' }}>
-              <h2>Ask ManagerBot</h2>
-              <p>Try: “Update landing page headline” or “Add new AI mentor section”</p>
-              <input
-                type="text"
-                style={{ width: '100%', padding: '10px' }}
-                placeholder="Type a command..."
-              />
-              <button style={{ marginTop: '0.5rem', padding: '8px 16px' }}>
-                Send to ManagerBot
-              </button>
-            </div>
-          </>
-        )}
-      </main>
-    </>
+      {loading ? (
+        <p>Loading insights...</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ideas.map((idea, idx) => (
+            <Card key={idx}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-medium">Idea #{idx + 1}</h2>
+                  <Lightbulb className="text-blue-400" />
+                </div>
+                <p className="mt-2 text-gray-700">{idea}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
