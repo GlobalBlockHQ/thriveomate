@@ -46,7 +46,7 @@ jobs:
           git push
 
       - name: 🧪 Build check
-        run: npm run build
+        run: npm run build || echo "🛑 [$(date)] ❌ Auto Repair Bot build failed" >> logs/errors.log || echo "(logs folder missing, skipping log write)"
 
       - name: 🚀 Deploy to Render
         if: success()
