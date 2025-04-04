@@ -1,0 +1,44 @@
+name: AI Dependency Optimizer
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"  # Runs every Monday at 4am UTC
+
+jobs:
+  audit-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: 📦 Install deps
+        run: npm install
+
+      - name: 🔍 Analyze for unused packages
+        run: |
+          npx depcheck > depcheck.log || true
+          echo "📄 Finished analyzing. Log saved as depcheck.log."
+
+      - name: ⛔ Fail on critical unused packages
+        run: |
+          if grep -q "Unused dependencies" depcheck.log; then
+            echo "🚨 Unused dependencies detected!" && cat depcheck.log
+            exit 1
+          fi
+
+      - name: ✅ Report clean dependency state
+        if: success()
+        run: echo "✅ All dependencies are clean and in use."
+
+      - name: 📤 Upload audit log (optional)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: depcheck-report
+          path: depcheck.log
