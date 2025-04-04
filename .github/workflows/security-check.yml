@@ -1,0 +1,54 @@
+name: Security Check Bot
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  check-secrets:
+    name: Secret & Auth Safety
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🕵️ Scan for leaked keys
+        run: |
+          echo "🔍 Scanning for exposed API keys or secrets..."
+
+          if grep -E -r 'sk_live_[0-9a-zA-Z]{24,}' . --exclude-dir=node_modules; then
+            echo "❌ Stripe secret key may be exposed in code!"
+            exit 1
+          fi
+
+          if grep -E -r 'sk-[A-Za-z0-9]{32,}' . --exclude-dir=node_modules; then
+            echo "❌ OpenAI key may be exposed in code!"
+            exit 1
+          fi
+
+          echo "✅ No exposed keys found."
+
+      - name: 🔐 Validate required secrets
+        run: |
+          missing=false
+          for var in OPENAI_API_KEY STRIPE_SECRET_KEY NEXTAUTH_SECRET NEXTAUTH_URL; do
+            if ! printenv | grep -q "$var"; then
+              echo "❌ Missing required secret: $var"
+              missing=true
+            fi
+          done
+
+          if [ "$missing" = true ]; then
+            exit 1
+          fi
+
+          echo "✅ All required environment variables are set."
+
+      - name: ✅ Security check passed
+        if: success()
+        run: echo "🔐 All secrets validated. No leaks or missing keys."
+
+      - name: ❌ Security check failed
+        if: failure()
+        run: echo "🚨 Secrets validation failed! Check your keys, .env, or Render settings."
