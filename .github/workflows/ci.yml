@@ -1,0 +1,55 @@
+name: CI Auto-Fix and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  fix-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: 📦 Install dependencies
+        run: npm install || true
+
+      - name: 🔍 Fix missing modules
+        run: |
+          missing=$(node -e "
+            const fs = require('fs');
+            const code = fs.readFileSync('./pages/api/webhooks/stripe.ts', 'utf8');
+            const matches = code.match(/from '([^']+)'/g) || [];
+            const pkgs = matches.map(s => s.replace(/from '|'/g, '')).filter(p => !p.startsWith('.') && p !== 'next' && p !== 'stripe');
+            const installed = Object.keys(require('./package.json').dependencies || {});
+            const toInstall = pkgs.filter(p => !installed.includes(p));
+            if (toInstall.length) console.log(toInstall.join(' '));
+          ")
+          if [ ! -z "$missing" ]; then
+            echo "Installing missing modules: $missing"
+            npm install $missing
+            git config user.name "CI Bot"
+            git config user.email "ci-bot@thriveomate.com"
+            git add package.json package-lock.json
+            git commit -m "fix: auto-install missing modules ($missing)"
+            git push
+          else
+            echo "✅ No missing packages"
+          fi
+
+      - name: 🧪 Run build to confirm
+        run: npm run build
+
+      - name: 🚀 Trigger Render Deploy
+        if: success()
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
