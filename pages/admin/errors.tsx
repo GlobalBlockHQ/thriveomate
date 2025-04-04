@@ -26,7 +26,7 @@ export default function AdminErrorPage({ logs }: ErrorPageProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <TerminalSquare className="text-gray-400" />
-                  <span className="font-mono text-sm">{line}</span>
+                  <span className="font-mono text-sm whitespace-pre-wrap">{line}</span>
                 </div>
               </CardContent>
             </Card>
@@ -42,10 +42,12 @@ export const getServerSideProps: GetServerSideProps = async () => {
   let logs: string[] = [];
 
   try {
-    const content = fs.readFileSync(logPath, 'utf8');
-    logs = content.split('\n').filter((line) => line.trim().length > 0);
+    if (fs.existsSync(logPath)) {
+      const content = fs.readFileSync(logPath, 'utf8');
+      logs = content.split('\n').filter((line) => line.trim().length > 0);
+    }
   } catch (e) {
-    logs = [];
+    logs = ["⚠️ Error loading logs: " + (e as Error).message];
   }
 
   return {
