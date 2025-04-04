@@ -1,7 +1,6 @@
 {
   "name": "thriveomate",
   "version": "1.0.0",
-  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,6 +21,7 @@
     "typescript": "^5.4.2",
     "@types/node": "^20.11.24",
     "@types/react": "^18.2.42",
-    "@types/react-dom": "^18.2.17"
+    "@types/react-dom": "^18.2.17",
+    "@types/micro": "^7.3.5"
   }
 }
