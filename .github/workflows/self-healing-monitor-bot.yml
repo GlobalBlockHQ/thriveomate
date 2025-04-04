@@ -1,0 +1,37 @@
+name: Self-Healing Monitor Bot
+
+on:
+  workflow_run:
+    workflows: ["Auto Repair + Deploy"]
+    types:
+      - completed
+
+jobs:
+  monitor-render-health:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🕵️ Check Render logs (simulated)
+        run: |
+          echo "🔍 Checking Render logs for repeat errors..."
+          # Placeholder – in a full version, you'd use Render API or saved logs
+          echo "Detected repeated module error. Triggering rollback."
+
+      - name: 🔁 Roll back to last successful commit
+        run: |
+          echo "Reverting to last successful commit..."
+          git fetch origin main
+          LAST_GOOD=$(git rev-list origin/main | head -n 2 | tail -n 1)
+          git reset --hard $LAST_GOOD
+          git push --force
+
+      - name: 🛠️ Redeploy after rollback
+        run: |
+          echo "Triggering redeploy after rollback..."
+          curl -X POST "$RENDER_DEPLOY_HOOK"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
