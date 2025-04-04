@@ -12,7 +12,7 @@ export default function Home() {
       </Head>
 
       <main style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
-        <h1>Welcome to Thriveomate</h1>
+        <h1>Welcome to the new Thriveomate</h1>
         <p>
           Your AI-powered business cofounder. Thriveomate helps anyone — from solo founders to Web3 builders —
           launch, grow, and run a business completely hands-free.
