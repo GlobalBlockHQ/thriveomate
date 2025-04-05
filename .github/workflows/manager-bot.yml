@@ -1,0 +1,76 @@
+name: Manager Bot (Chat + Code + Commit)
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  manager-bot-chat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: 🧠 Interpret Issue with OpenAI
+        id: gpt
+        run: |
+          ISSUE_BODY=$(jq -r .issue.body "$GITHUB_EVENT_PATH")
+
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gpt-4",
+              "messages": [
+                {"role": "system", "content": "You're a GitHub project assistant. When the user requests a code change, respond with updated files. If they reply 'yes commit', write the changes and push."},
+                {"role": "user", "content": "'"$ISSUE_BODY"'"}
+              ],
+              "max_tokens": 800
+            }' | jq -r '.choices[0].message.content')
+
+          echo "$RESPONSE" > reply.md
+
+      - name: 💬 Reply to GitHub Issue
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body-path: reply.md
+
+  auto-commit-if-confirmed:
+    if: contains(github.event.issue.body, 'yes commit')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: 🧠 Generate Files from GPT (Commit Phase)
+        run: |
+          PROMPT=$(jq -r .issue.body "$GITHUB_EVENT_PATH")
+
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gpt-4",
+              "messages": [
+                {"role": "system", "content": "You are a GitHub bot. Respond with code block format and filenames to write directly into the repo."},
+                {"role": "user", "content": "'"$PROMPT"'"}
+              ],
+              "max_tokens": 1000
+            }' | jq -r '.choices[0].message.content')
+
+          echo "$RESPONSE" > gpt-code.md
+          echo "$RESPONSE" >> logs/manager.log
+
+      - name: 🚀 Commit Generated Files
+        run: |
+          git config user.name "ManagerBot"
+          git config user.email "manager@thriveomate.com"
+          git add .
+          git commit -m "auto: changes from ManagerBot issue commit"
+          git push
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
